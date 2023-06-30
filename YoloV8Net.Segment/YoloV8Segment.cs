@@ -24,19 +24,16 @@ namespace YoloV8Net.Segment
             var (w, h) = (image.Width, image.Height); // image w and h
             var (xGain, yGain) = (ModelInputWidth / (float)w, ModelInputHeight / (float)h); // x, y gains
             var gain = Math.Min(xGain, yGain); // gain = resized / original
-
-            var (xPad, yPad) = ((ModelInputWidth - w * gain) / 2, (ModelInputHeight - h * gain) / 2); // left, right pads
-
             Parallel.For(0, dect.Dimensions[0], i =>
             {
                 //divide total length by the elements per prediction
                 //int divj = (int)(dect.Length / dect.Dimensions[1]);
                 Parallel.For(0, (int)(dect.Length / dect.Dimensions[1]), j =>
                 {
-                    float xMin = ((dect[i, 0, j] - dect[i, 2, j] / 2) - xPad) / gain; // unpad bbox tlx to original
-                    float yMin = ((dect[i, 1, j] - dect[i, 3, j] / 2) - yPad) / gain; // unpad bbox tly to original
-                    float xMax = ((dect[i, 0, j] + dect[i, 2, j] / 2) - xPad) / gain; // unpad bbox brx to original
-                    float yMax = ((dect[i, 1, j] + dect[i, 3, j] / 2) - yPad) / gain; // unpad bbox bry to original
+                    float xMin = (dect[i, 0, j] - dect[i, 2, j] / 2) / gain; // unpad bbox tlx to original
+                    float yMin = (dect[i, 1, j] - dect[i, 3, j] / 2) / gain; // unpad bbox tly to original
+                    float xMax = (dect[i, 0, j] + dect[i, 2, j] / 2) / gain; // unpad bbox brx to original
+                    float yMax = (dect[i, 1, j] + dect[i, 3, j] / 2) / gain; // unpad bbox bry to original
 
                     xMin = Utils.Clamp(xMin, 0, w - 0); // clip bbox tlx to boundaries
                     yMin = Utils.Clamp(yMin, 0, h - 0); // clip bbox tly to boundaries
@@ -52,7 +49,6 @@ namespace YoloV8Net.Segment
                     Parallel.For(0, Classes.Length, nc =>
                     {
                         var pred = dect[i, 4 + nc, j];
-
                         //skip low confidence values
                         if (pred < Confidence) return;
                         result.Add(new SegPrediction()
@@ -68,10 +64,10 @@ namespace YoloV8Net.Segment
             //NMS
             SegPrediction[] nms_results = Suppress(result.ToList());
             Mat proto_data = new Mat(32, 25600, MatType.CV_32F, prop.ToArray());
+            Mat rgb_mask = Mat.Zeros(new OpenCvSharp.Size(image.Width, image.Height), MatType.CV_8UC3);
+            Random rd = new Random();
             for (int r = 0; r < nms_results.Length; r++)
             {
-                Mat rgb_mask = Mat.Zeros(new OpenCvSharp.Size(image.Width, image.Height), MatType.CV_8UC3);
-                Random rd = new Random();
                 Rect box = nms_results[r].Rectangle;
                 int box_x1 = box.X;
                 int box_y1 = box.Y;
@@ -87,11 +83,11 @@ namespace YoloV8Net.Segment
                 // 1x25600 -> 160x160
                 Mat reshape_mask = original_mask.Reshape(1, 160);
                 // scale
-                float scale = Math.Max(w, h) / 640f;
-                int mx1 = Math.Max(0, (int)((box_x1 + xPad) / scale * 0.25));
-                int mx2 = Math.Max(0, (int)((box_x2 + xPad) / scale * 0.25));
-                int my1 = Math.Max(0, (int)((box_y1 + yPad) / scale * 0.25));
-                int my2 = Math.Max(0, (int)((box_y2 + yPad) / scale * 0.25));
+                //float scale = Math.Max(w, h) / 640f;
+                int mx1 = Math.Max(0, (int)(box_x1 * gain * 0.25));
+                int mx2 = Math.Max(0, (int)(box_x2 * gain * 0.25));
+                int my1 = Math.Max(0, (int)(box_y1 * gain * 0.25));
+                int my2 = Math.Max(0, (int)(box_y2 * gain * 0.25));
                 // get roi
                 Mat mask_roi = new Mat(reshape_mask, new OpenCvSharp.Range(my1, my2), new OpenCvSharp.Range(mx1, mx2));
                 Mat actual_maskm = new Mat();
@@ -124,8 +120,9 @@ namespace YoloV8Net.Segment
 
         public override SegPrediction[] Predict(Mat image)
         {
+            DenseTensor<float>[] onnxOutput = Inference(image);
             return ParseOutput(
-                    Inference(image)[0], Inference(image)[1], image);
+                    onnxOutput[0], onnxOutput[1], image);
         }
     }
 }

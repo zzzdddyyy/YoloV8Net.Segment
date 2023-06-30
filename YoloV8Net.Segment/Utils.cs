@@ -36,7 +36,7 @@ namespace BataAiAssist
         /// <param name="hr"></param>
         /// <param name="isZoomIn"></param>
         /// <returns></returns>
-        public static Mat ResizeImg(Mat src, int wr, int hr, bool isZoomIn = false)
+        public static Mat ResizeImgCenter(Mat src, int wr, int hr, bool isZoomIn = false)
         {
             Mat dst_img = new Mat();
             int iw = src.Size(1);
@@ -56,10 +56,31 @@ namespace BataAiAssist
                 bg = new Mat(new OpenCvSharp.Size(wr, hr), MatType.CV_8UC3, new Scalar(128, 128, 128));
             }
             Mat mask = new Mat();
-            Cv2.CvtColor(dst_img, mask, ColorConversionCodes.BGR2GRAY);
+            //Cv2.CvtColor(dst_img, mask, ColorConversionCodes.BGR2GRAY);
+
             Mat roi = new Mat(bg, new Rect((int)(wr - nw) / 2, (int)(hr - nh) / 2, nw, nh));
             dst_img.CopyTo(roi, mask);
+            Cv2.CvtColor(bg, bg, ColorConversionCodes.BGR2RGB);
             return bg;
+        }
+
+        /// <summary>
+        /// Set Orig Image to TL
+        /// </summary>
+        /// <param name="src"></param>
+        /// <param name="wr"></param>
+        /// <param name="hr"></param>
+        /// <returns></returns>
+        public static Mat ResizeImgTL(Mat src, int wr, int hr)
+        {
+            int max_axis = src.Cols > src.Rows ? src.Cols : src.Rows;
+            Mat dst_img = Mat.Zeros(new OpenCvSharp.Size(max_axis, max_axis), MatType.CV_8UC3);
+            Rect roi = new Rect(0, 0, src.Cols, src.Rows);
+            src.CopyTo(new Mat(dst_img, roi));
+            Cv2.CvtColor(dst_img, dst_img, ColorConversionCodes.BGR2RGB);
+            Mat resize_image = new Mat();
+            Cv2.Resize(dst_img, resize_image, new OpenCvSharp.Size(wr, hr));
+            return resize_image;
         }
 
         /// <summary>
@@ -89,9 +110,9 @@ namespace BataAiAssist
                     byte* dst_dataColor = (byte*)dst_ptrColor.ToPointer();
                     Parallel.For(0, input.Width, (c) =>
                     {
-                        output[0, 0, r, c] = (float)(dst_dataColor[c * 3 + 2] / 255.0); // r
+                        output[0, 0, r, c] = (float)(dst_dataColor[c * 3 + 0] / 255.0); // r
                         output[0, 1, r, c] = (float)(dst_dataColor[c * 3 + 1] / 255.0); // g
-                        output[0, 2, r, c] = (float)(dst_dataColor[c * 3 + 0] / 255.0); // b
+                        output[0, 2, r, c] = (float)(dst_dataColor[c * 3 + 2] / 255.0); // b
                     });
                 });
             }
@@ -121,9 +142,9 @@ namespace BataAiAssist
 
                     Parallel.For(0, bitmapData.Width, (x) =>
                     {
-                        tensor[0, 0, y, x] = row[x * bytesPerPixel + 2] / 255.0F; // r
+                        tensor[0, 0, y, x] = row[x * bytesPerPixel + 0] / 255.0F; // r
                         tensor[0, 1, y, x] = row[x * bytesPerPixel + 1] / 255.0F; // g
-                        tensor[0, 2, y, x] = row[x * bytesPerPixel + 0] / 255.0F; // b
+                        tensor[0, 2, y, x] = row[x * bytesPerPixel + 2] / 255.0F; // b
                     });
                 });
 

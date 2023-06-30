@@ -10,12 +10,12 @@ namespace YoloV8Net.Segment
         /// <summary>
         /// label
         /// </summary>
-        public SegClass? Label { get; init; }
+        public SegClass? Label { get; set; }
 
         /// <summary>
         /// Box
         /// </summary>
-        public Rect Rectangle { get; init; }
+        public Rect Rectangle { get; set; }
 
         /// <summary>
         /// score

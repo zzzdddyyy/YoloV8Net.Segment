@@ -130,9 +130,6 @@
         private MenuStrip menuStrip1;
         private ToolStripMenuItem tsmFile;
         private ToolStripMenuItem btnOpenImg;
-        private CheckBox ckbAdd;
-        private CheckBox ckbUseGpu;
-        private Label lblShoulderW;
         private ToolStripStatusLabel toolStripStatusLabel1;
         private ToolStripStatusLabel lblResult;
         private StatusStrip statusStrip1;

@@ -29,7 +29,7 @@ namespace YoloV8Net.Segment
         protected string[] modelOutputs;
         protected SegClass[] Classes { get; set; } = new SegClass[] { };
 
-        public float Confidence { get; protected set; } = 0.20f;
+        public float Confidence { get; protected set; } = 0.25f;
         public float MulConfidence { get; protected set; } = 0.25f;
         public float Overlap { get; protected set; } = 0.45f;
 
@@ -122,20 +122,21 @@ namespace YoloV8Net.Segment
 
         protected virtual DenseTensor<float>[] Inference(Mat img)
         {
-            Mat resized = null;
+            Mat resized = new Mat();
 
             if (img.Width != ModelInputWidth || img.Height != ModelInputHeight)
             {
-                resized = Utils.ResizeImg(img, ModelInputWidth, ModelInputHeight); // fit image size to specified input size
+                resized = Utils.ResizeImgTL(img, ModelInputWidth, ModelInputHeight); // fit image size to specified input size
             }
             else
             {
                 resized = img;
             }
-
+            //resized.ImWrite("resizedTL.png");
             var inputs = new List<NamedOnnxValue> // add image as onnx input
             {
-                NamedOnnxValue.CreateFromTensor(InputColumnName, Utils.ExtractPixels(resized))
+                //NamedOnnxValue.CreateFromTensor(InputColumnName, Utils.ExtractPixels(resized))
+                NamedOnnxValue.CreateFromTensor(InputColumnName, Utils.Mat2NormTensor(resized))
             };
 
             IDisposableReadOnlyCollection<DisposableNamedOnnxValue> result = _inferenceSession.Run(inputs); // run inference
